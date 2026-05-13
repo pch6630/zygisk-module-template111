@@ -24,17 +24,13 @@ jobs:
         with:
           python-version: '3.x'
 
-      # 정상 작동하는 NDK 다운로드 플러그인으로 전면 수정
+      # 실제로 존재하는 공식 플러그인 주소(nttld/setup-ndk) 확인 완료
       - name: Install Android NDK
-        uses: android-actions/setup-ndk@v1
+        uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
           ndk-version: r25c
-
-      - name: Verify NDK
-        run: |
-          echo $ANDROID_NDK_HOME
-          ls ${{ steps.setup-ndk.outputs.ndk-path }}
+          link-to-sdk: true
 
       - name: Clean build cache
         run: |
