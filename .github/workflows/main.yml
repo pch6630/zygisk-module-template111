@@ -1,56 +1,52 @@
-name: Build Zygisk Module
+name: Android CI
 
 on:
   push:
     branches:
+      - main
       - master
-  workflow_dispatch:
+
+  pull_request:
+
+workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
-      - name: Init submodules
-        run: git submodule update --init --recursive
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: 3.11
 
-      - name: Install Android NDK
+      - name: Setup Android NDK
         uses: nttld/setup-ndk@v1
-        id: setup_ndk
         with:
-          ndk-version: r25c
-          add-to-path: true
-          link-to-sdk: true
+          ndk-version: r29
 
-      - name: Verify NDK
-        run: |
-          echo $ANDROID_NDK_HOME
-          ls /usr/local/lib/android/sdk/ndk/
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
 
-      - name: Clean build cache
-        run: |
-          rm -rf build
-          rm -rf my_build
-          rm -rf output
+      - name: Grant execute permission
+        run: chmod +x build.py
 
       - name: Build Module
-        env:
-          ANDROID_NDK_HOME: ${{ steps.setup_ndk.outputs.ndk-path }}
-        run: |
-          chmod +x build.py
-          python3 build.py build
+        run: python3 build.py build
 
-      - name: Upload Artifact
+      - name: Upload ZIP
         uses: actions/upload-artifact@v4
         with:
           name: zygisk-module
