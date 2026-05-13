@@ -1,0 +1,36 @@
+name: Build Zygisk Module
+
+on:
+  push:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Android NDK
+        uses: n0rt3n/setup-ndk@v1
+        with:
+          ndk-version: r25c
+
+      - name: Build with Build.py
+        run: |
+          python3 빌드.py
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Bleach-Damage-Mod
+          path: out/*.zip
