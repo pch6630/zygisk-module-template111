@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project(zygisk-test)
 
-enable_language(C CXX ASM) # ASM 언어 명시적 활성화
+enable_language(C CXX ASM)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 20)
@@ -10,14 +10,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
-# Dobby 소스 빌드 시 어셈블리 에러를 막기 위한 전역 매크로 설정
+# 어셈블리 충돌 에러 우회 플래그
 add_definitions(-DDOBBY_DISABLE_ARM64_ASM)
 add_compile_definitions(DOBBY_DISABLE_ARM64_ASM)
 
 include(FetchContent)
 
 # =========================
-# Dobby
+# Dobby (진짜 올바른 주소 반영)
 # =========================
 FetchContent_Declare(
     dobby
@@ -26,7 +26,7 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
-# Dobby 내부 옵션 강제 오버라이드
+# Dobby 내부 옵션 제어
 set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
 set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
 set(Plugin.SymbolResolver OFF CACHE BOOL "" FORCE)
