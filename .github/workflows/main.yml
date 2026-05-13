@@ -27,14 +27,14 @@ jobs:
           ndk-version: r25c
           link-to-sdk: true
 
-      - name: Build with Build.py
+      - name: Build Module
         env:
           ANDROID_NDK_HOME: ${{ steps.setup_ndk.outputs.ndk-path }}
         run: |
-          python3 build.py Build
+          python3 build.py build
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Bleach-Damage-Mod
+          name: zygisk-module
           path: out/*.zip
