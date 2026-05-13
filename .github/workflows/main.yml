@@ -28,7 +28,7 @@ jobs:
 
       - name: Build with Build.py
         run: |
-          python3 빌드.py
+          python3 build.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
