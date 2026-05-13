@@ -19,7 +19,6 @@ include(FetchContent)
 FetchContent_Declare(
     dobby
     GIT_REPOSITORY https://github.com/jmpews/Dobby.git
-    GIT_TAG v1.2.0
 )
 
 # Dobby 옵션
@@ -27,7 +26,7 @@ set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
 set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
 set(Plugin.SymbolResolver OFF CACHE BOOL "" FORCE)
 
-# ARM64 ASM 비활성화 (빌드 오류 방지)
+# ARM64 ASM 비활성화
 add_definitions(-DDOBBY_DISABLE_ARM64_ASM)
 
 FetchContent_MakeAvailable(dobby)
