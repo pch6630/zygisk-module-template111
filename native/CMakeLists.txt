@@ -4,7 +4,7 @@ project(sample)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# 컴파일 옵션
+# 컴파일 옵션 (큰따옴표를 지우고 리스트 형태로 나열하여 줄바꿈 오류를 완전히 해결함)
 set(CMAKE_CXX_FLAGS
     ${CMAKE_CXX_FLAGS}
     -fno-exceptions
@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS
     -fvisibility-inlines-hidden
 )
 
-# Dobby 가져오기
+# Dobby 가져오기 (원래 사용하시던 올바른 GitHub 주소)
 include(FetchContent)
 
 FetchContent_Declare(
