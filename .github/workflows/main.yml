@@ -22,13 +22,14 @@ jobs:
 
       - name: Install Android NDK
         uses: nttld/setup-ndk@v1
+        id: setup-ndk
         with:
           ndk-version: r25c
           link-to-sdk: true
 
       - name: Build with Build.py
         run: |
-          python3 build.py
+          python3 build.py build --ndk "${{ steps:setup-ndk.outputs.ndk-path }}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
