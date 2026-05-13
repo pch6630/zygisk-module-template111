@@ -4,7 +4,7 @@ project(sample)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# 컴파일 옵션 (줄바꿈 오류 해결 버전)
+# 컴파일 옵션
 set(CMAKE_CXX_FLAGS
     ${CMAKE_CXX_FLAGS}
     -fno-exceptions
@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS
     -fvisibility-inlines-hidden
 )
 
-# Dobby 가져오기
+# Dobby 가져오기 (올바른 GitHub 저장소 주소 반영)
 include(FetchContent)
 
 FetchContent_Declare(
