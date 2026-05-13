@@ -10,18 +10,18 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
-# 어셈블리 충돌 에러 우회 플래그
+# 어셈블리 에러 우회 플래그
 add_definitions(-DDOBBY_DISABLE_ARM64_ASM)
 add_compile_definitions(DOBBY_DISABLE_ARM64_ASM)
 
 include(FetchContent)
 
-# =========================
-# Dobby (진짜 올바른 주소 반영)
-# =========================
+# ========================================================
+# Dobby (★ 아래 굵은 글씨의 주소 공백을 모두 지워서 붙여주세요)
+# ========================================================
 FetchContent_Declare(
     dobby
-    GIT_REPOSITORY github.com
+    GIT_REPOSITORY https://github.com/jmpews/Dobby.git
     GIT_TAG master
     GIT_SHALLOW TRUE
 )
