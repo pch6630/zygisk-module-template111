@@ -1,29 +1,20 @@
-/* Copyright 2022-2023 John "topjohnwu" Wu
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
- * AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
- * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
- * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
- * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-
-#include <cstdlib>
-#include <unistd.h>
-#include <fcntl.h>
-#include <android/log.h>
-
+#include <jni.h>
+#include <string>
 #include "zygisk.hpp"
+#include "dobby.h"
 
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
 using zygisk::ServerSpecializeArgs;
 
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "MyModule", __VA_ARGS__)
+// 원래 함수를 저장할 포인터
+float (*old_get_Atk)(void* instance);
+
+// 우리가 만든 가짜 함수 (공격력 조작)
+float new_get_Atk(void* instance) {
+    // 원래 값을 무시하고 99999.0f를 반환 (데미지 폭증)
+    return 99999.0f; 
+}
 
 class MyModule : public zygisk::ModuleBase {
 public:
@@ -33,47 +24,23 @@ public:
     }
 
     void preAppSpecialize(AppSpecializeArgs *args) override {
-        // Use JNI to fetch our process name
         const char *process = env->GetStringUTFChars(args->nice_name, nullptr);
-        preSpecialize(process);
+        // 타겟 게임 패키지명 확인 (예: com.linegames.bw)
+        if (process && strstr(process, "com.linegames.bw")) { 
+            api->setOption(zygisk::Option::DLCLOSE_PROTECT_HANDLE);
+        }
         env->ReleaseStringUTFChars(args->nice_name, process);
     }
 
-    void preServerSpecialize(ServerSpecializeArgs *args) override {
-        preSpecialize("system_server");
+    void postAppSpecialize(const AppSpecializeArgs *args) override {
+        // libil2cpp.so가 로드될 때까지 기다렸다가 후킹 실행
+        // 실제 구현 시에는 별도의 스레드나 헬퍼 함수를 통해 
+        // il2cpp_resolve_icall("CommonAttribute::get_Atk") 주소를 찾아 DobbyHook을 적용합니다.
     }
 
 private:
     Api *api;
     JNIEnv *env;
-
-    void preSpecialize(const char *process) {
-        // Demonstrate connecting to to companion process
-        // We ask the companion for a random number
-        unsigned r = 0;
-        int fd = api->connectCompanion();
-        read(fd, &r, sizeof(r));
-        close(fd);
-        LOGD("process=[%s], r=[%u]\n", process, r);
-
-        // Since we do not hook any functions, we should let Zygisk dlclose ourselves
-        api->setOption(zygisk::Option::DLCLOSE_MODULE_LIBRARY);
-    }
-
 };
 
-static int urandom = -1;
-
-static void companion_handler(int i) {
-    if (urandom < 0) {
-        urandom = open("/dev/urandom", O_RDONLY);
-    }
-    unsigned r;
-    read(urandom, &r, sizeof(r));
-    LOGD("companion r=[%u]\n", r);
-    write(i, &r, sizeof(r));
-}
-
-// Register our module class and the companion handler function
 REGISTER_ZYGISK_MODULE(MyModule)
-REGISTER_ZYGISK_COMPANION(companion_handler)
