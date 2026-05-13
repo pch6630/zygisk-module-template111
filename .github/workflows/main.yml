@@ -28,8 +28,10 @@ jobs:
           link-to-sdk: true
 
       - name: Build with Build.py
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup_ndk.outputs.ndk-path }}
         run: |
-          python3 build.py -n "${{ steps.setup_ndk.outputs.ndk-path }}" build
+          python3 build.py Build
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
