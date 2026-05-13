@@ -24,18 +24,17 @@ jobs:
         with:
           python-version: '3.x'
 
+      # 정상 작동하는 NDK 다운로드 플러그인으로 전면 수정
       - name: Install Android NDK
-        uses: ntid/setup-ndk@v1
+        uses: android-actions/setup-ndk@v1
         id: setup-ndk
         with:
           ndk-version: r25c
-          add-to-path: true
-          link-to-sdk: true
 
       - name: Verify NDK
         run: |
           echo $ANDROID_NDK_HOME
-          ls /usr/local/lib/android/sdk/ndk/
+          ls ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Clean build cache
         run: |
