@@ -1,64 +1,58 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project(sample)
+project(zygisk-test)
 
-set(CMAKE_CXX_STANDARD 17)
+enable_language(C CXX)
 
-# 컴파일 옵션 (큰따옴표를 지우고 리스트 형태로 나열하여 줄바꿈 오류를 완전히 해결함)
-set(CMAKE_CXX_FLAGS
-    ${CMAKE_CXX_FLAGS}
-    -fno-exceptions
-    -fno-rtti
-    -fvisibility=hidden
-    -fvisibility-inlines-hidden
-)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
-# Dobby 가져오기 (원래 사용하시던 올바른 GitHub 주소)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+
 include(FetchContent)
 
+# =========================
+# Dobby
+# =========================
 FetchContent_Declare(
     dobby
-    GIT_REPOSITORY github.com
+    GIT_REPOSITORY https://github.com/jmpews/Dobby.git
+    GIT_TAG master
+    GIT_SHALLOW TRUE
 )
-
-# Dobby 옵션
-set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
-set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
-set(Plugin.SymbolResolver OFF CACHE BOOL "" FORCE)
-
-# ARM64 ASM 비활성화
-add_definitions(-DDOBBY_DISABLE_ARM64_ASM)
 
 FetchContent_MakeAvailable(dobby)
 
-# 모듈 생성
-add_library(${MODULE_NAME} SHARED
-    example.cpp
+# =========================
+# Source Files
+# =========================
+file(GLOB SRC_FILES
+    *.cpp
 )
 
-# include 경로
+# =========================
+# Module
+# =========================
+add_library(${MODULE_NAME} SHARED ${SRC_FILES})
+
 target_include_directories(${MODULE_NAME} PRIVATE
     ${dobby_SOURCE_DIR}/include
 )
 
-# 라이브러리 링크
-target_link_libraries(${MODULE_NAME} PRIVATE
+target_link_libraries(${MODULE_NAME}
     dobby
     log
 )
 
-# strip 및 심볼 저장
-macro(strip_and_move NAME)
-    add_custom_command(TARGET ${NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${DEBUG_SYMBOLS_PATH}
+target_compile_options(${MODULE_NAME} PRIVATE
+    -Wno-unused-value
+    -Wno-unused-variable
+    -fno-exceptions
+    -fno-rtti
+)
 
-        COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:${NAME}>
-            ${DEBUG_SYMBOLS_PATH}/$<TARGET_FILE_NAME:${NAME}>
-
-        COMMAND ${CMAKE_STRIP} --strip-all
-            $<TARGET_FILE:${NAME}>
-    )
-endmacro()
-
-strip_and_move(${MODULE_NAME})
+set_target_properties(${MODULE_NAME} PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+)
