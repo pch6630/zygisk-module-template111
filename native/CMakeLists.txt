@@ -3,16 +3,16 @@ project(sample)
 
 macro(strip_and_move NAME)
     add_custom_command(TARGET ${NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${DEBUG_SYMBOLS_PATH}
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${NAME}> ${DEBUG_SYMBOLS_PATH}/$<TARGET_FILE_NAME:${NAME}>
-            COMMAND ${CMAKE_STRIP} --strip-all $<TARGET_FILE:${NAME}>
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${DEBUG_SYMBOLS_PATH}
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${NAME}> ${DEBUG_SYMBOLS_PATH}/$<TARGET_FILE_NAME:${NAME}>
+        COMMAND ${CMAKE_STRIP} --strip-all $<TARGET_FILE:${NAME}>
     )
 endmacro()
 
-set(CXX_FLAGS "${CXX_FLAGS} -fno-exceptions -fno-rtti -fvisibility=hidden -fvisibility-inlines-hidden")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti -fvisibility=hidden -fvisibility-inlines-hidden")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS}")
-
+# 파일 이름이 example.cpp인 경우 그대로 둡니다.
 add_library(${MODULE_NAME} SHARED example.cpp)
-target_link_libraries(${MODULE_NAME} PRIVATE log)
+# dobby 라이브러리를 추가하여 빌드 에러를 방지합니다.
+target_link_libraries(${MODULE_NAME} PRIVATE log dobby)
 strip_and_move(${MODULE_NAME})
