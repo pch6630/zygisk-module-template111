@@ -5,10 +5,13 @@ set(CMAKE_CXX_STANDARD 17)
 
 # 컴파일 옵션
 set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti -fvisibility=hidden -fvisibility-inlines-hidden"
+    "${CMAKE_CXX_FLAGS}
+    -fno-exceptions
+    -fno-rtti
+    -fvisibility=hidden
+    -fvisibility-inlines-hidden"
 )
 
-# Dobby 가져오기
 include(FetchContent)
 
 FetchContent_Declare(
@@ -17,29 +20,29 @@ FetchContent_Declare(
     GIT_TAG 9ecb6c1
 )
 
-# Dobby 옵션
+# 핵심
 set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
 set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
+set(Plugin.SymbolResolver OFF CACHE BOOL "" FORCE)
+
+# ARM64 ASM 비활성화
+add_definitions(-DDOBBY_DISABLE_ARM64_ASM)
 
 FetchContent_MakeAvailable(dobby)
 
-# 라이브러리 생성
 add_library(${MODULE_NAME} SHARED
     example.cpp
 )
 
-# include 경로
 target_include_directories(${MODULE_NAME} PRIVATE
     ${dobby_SOURCE_DIR}/include
 )
 
-# 링크
 target_link_libraries(${MODULE_NAME} PRIVATE
     dobby
     log
 )
 
-# strip
 macro(strip_and_move NAME)
     add_custom_command(TARGET ${NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory ${DEBUG_SYMBOLS_PATH}
