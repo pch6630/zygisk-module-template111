@@ -29,7 +29,7 @@ jobs:
 
       - name: Build with Build.py
         run: |
-          python3 build.py build --ndk "${{ steps.setup_ndk.outputs.ndk-path }}"
+          python3 build.py build -n "${{ steps.setup_ndk.outputs.ndk-path }}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
