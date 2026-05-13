@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+      - main
+
   workflow_dispatch:
 
 jobs:
@@ -11,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -24,29 +26,33 @@ jobs:
         with:
           python-version: '3.x'
 
-      # 실제로 존재하는 공식 플러그인 주소(nttld/setup-ndk) 확인 완료
       - name: Install Android NDK
         uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
-          ndk-version: r25c
-          link-to-sdk: true
+          ndk-version: r26d
 
       - name: Clean build cache
         run: |
           rm -rf build
           rm -rf my_build
           rm -rf output
+          rm -rf out
+
+      - name: Grant execute permission
+        run: chmod +x build.py
 
       - name: Build Module
         env:
+          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          chmod +x build.py
           python3 build.py build
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: zygisk-module
-          path: out/*.zip
+          path: |
+            out/*.zip
+            output/*.zip
