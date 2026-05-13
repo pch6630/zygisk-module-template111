@@ -21,9 +21,10 @@ jobs:
           python-version: '3.x'
 
       - name: Install Android NDK
-        uses: n0rt3n/setup-ndk@v1
+        uses: nttld/setup-ndk@v1
         with:
           ndk-version: r25c
+          link-to-sdk: true
 
       - name: Build with Build.py
         run: |
