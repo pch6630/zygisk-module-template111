@@ -1,58 +1,57 @@
-cmake_minimum_required(VERSION 3.22.1)
+name: Build Zygisk Module
 
-project(zygisk-test)
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
 
-enable_language(C CXX)
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_CXX_STANDARD 20)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+      - name: Init submodules
+        run: git submodule update --init --recursive
 
-include(FetchContent)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
 
-# =========================
-# Dobby
-# =========================
-FetchContent_Declare(
-    dobby
-    GIT_REPOSITORY https://github.com/jmpews/Dobby.git
-    GIT_TAG master
-    GIT_SHALLOW TRUE
-)
+      - name: Install Android NDK
+        uses: ntid/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r25c
+          add-to-path: true
+          link-to-sdk: true
 
-FetchContent_MakeAvailable(dobby)
+      - name: Verify NDK
+        run: |
+          echo $ANDROID_NDK_HOME
+          ls /usr/local/lib/android/sdk/ndk/
 
-# =========================
-# Source Files
-# =========================
-file(GLOB SRC_FILES
-    *.cpp
-)
+      - name: Clean build cache
+        run: |
+          rm -rf build
+          rm -rf my_build
+          rm -rf output
 
-# =========================
-# Module
-# =========================
-add_library(${MODULE_NAME} SHARED ${SRC_FILES})
+      - name: Build Module
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          chmod +x build.py
+          python3 build.py build
 
-target_include_directories(${MODULE_NAME} PRIVATE
-    ${dobby_SOURCE_DIR}/include
-)
-
-target_link_libraries(${MODULE_NAME}
-    dobby
-    log
-)
-
-target_compile_options(${MODULE_NAME} PRIVATE
-    -Wno-unused-value
-    -Wno-unused-variable
-    -fno-exceptions
-    -fno-rtti
-)
-
-set_target_properties(${MODULE_NAME} PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-)
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zygisk-module
+          path: out/*.zip
