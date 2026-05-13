@@ -13,7 +13,7 @@ set(CMAKE_CXX_FLAGS
     -fvisibility-inlines-hidden
 )
 
-# Dobby 가져오기 (올바른 GitHub 저장소 주소 반영)
+# Dobby 가져오기
 include(FetchContent)
 
 FetchContent_Declare(
