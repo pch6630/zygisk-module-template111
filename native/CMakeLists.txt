@@ -4,13 +4,13 @@ project(sample)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# 컴파일 옵션
+# 컴파일 옵션 (줄바꿈 오류 해결 버전)
 set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS}
+    ${CMAKE_CXX_FLAGS}
     -fno-exceptions
     -fno-rtti
     -fvisibility=hidden
-    -fvisibility-inlines-hidden"
+    -fvisibility-inlines-hidden
 )
 
 # Dobby 가져오기
@@ -18,7 +18,7 @@ include(FetchContent)
 
 FetchContent_Declare(
     dobby
-    GIT_REPOSITORY https://github.com/jmpews/Dobby.git
+    GIT_REPOSITORY github.com
 )
 
 # Dobby 옵션
