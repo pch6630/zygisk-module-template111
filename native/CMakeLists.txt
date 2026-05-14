@@ -32,7 +32,6 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
-# ❗ Dobby 자체 빌드 금지
 FetchContent_Populate(dobby)
 
 # =========================
@@ -43,11 +42,8 @@ file(GLOB_RECURSE DOBBY_SRC
     ${dobby_SOURCE_DIR}/source/*.cpp
 )
 
-# =========================
-# ASM 제거
-# =========================
+# ❗ asm 파일만 제거
 list(FILTER DOBBY_SRC EXCLUDE REGEX ".*\\.asm$")
-list(FILTER DOBBY_SRC EXCLUDE REGEX ".*arm64.*")
 
 # =========================
 # Module Source
@@ -81,7 +77,7 @@ target_link_libraries(${MODULE_NAME}
 )
 
 # =========================
-# Compile Option
+# Compile Options
 # =========================
 target_compile_options(${MODULE_NAME} PRIVATE
     -O3
