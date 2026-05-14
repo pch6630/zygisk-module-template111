@@ -3,9 +3,11 @@
 #include <thread>
 #include <chrono>
 #include <random>
+#include <dlfcn.h>
+
 #include "zygisk.hpp"
 #include "dobby.h"
-
+    
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
 
