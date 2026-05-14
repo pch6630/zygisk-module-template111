@@ -51,4 +51,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zygisk-module
-          path: release/*.zip
+          path: out/*.zip
