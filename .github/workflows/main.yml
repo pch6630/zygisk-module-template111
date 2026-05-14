@@ -52,7 +52,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zygisk-module
-          path: |
-            out/*.zip
-            output/*.zip
+         name: zygisk-module
+         path: output/*.zip
