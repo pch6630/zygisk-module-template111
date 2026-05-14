@@ -15,9 +15,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Init submodules
-        run: git submodule update --init --recursive
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -29,13 +26,15 @@ jobs:
         with:
           ndk-version: r26d
 
+      # 🔥 FULL CLEAN (중요)
       - name: Clean build cache
         run: |
           rm -rf build
           rm -rf my_build
           rm -rf output
           rm -rf out
-          rm -rf release
+          rm -rf .cache
+          rm -rf _deps
 
       - name: Grant execute permission
         run: chmod +x build.py
@@ -48,10 +47,10 @@ jobs:
           python3 build.py zip
 
       - name: Show release files
-        run: ls -R release || true
+        run: find . -name "*.zip" || true
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: zygisk-module
-          path: release/*.zip
+          path: "**/*.zip"
