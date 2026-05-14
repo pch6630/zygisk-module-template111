@@ -5,7 +5,6 @@ on:
     branches:
       - master
       - main
-
   workflow_dispatch:
 
 jobs:
@@ -13,10 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 가상 머신에 본인의 소스 코드 전체를 정상적으로 내려받도록 수정한 핵심 구간
       - name: Checkout source
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Init submodules
         run: git submodule update --init --recursive
@@ -54,4 +52,3 @@ jobs:
         with:
           name: zygisk-module
           path: release/*.zip
-
