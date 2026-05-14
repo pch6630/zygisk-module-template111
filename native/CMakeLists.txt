@@ -5,9 +5,6 @@ project(zygisk-test LANGUAGES C CXX)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 # =========================
 # 기본 옵션
 # =========================
@@ -35,15 +32,43 @@ FetchContent_Declare(
 FetchContent_Populate(dobby)
 
 # =========================
-# Dobby Source
+# Dobby Include
 # =========================
-file(GLOB_RECURSE DOBBY_SRC
-    ${dobby_SOURCE_DIR}/source/*.cc
-    ${dobby_SOURCE_DIR}/source/*.cpp
+set(DOBBY_INCLUDE
+    ${dobby_SOURCE_DIR}/include
+    ${dobby_SOURCE_DIR}/source
+    ${dobby_SOURCE_DIR}
+    ${dobby_SOURCE_DIR}/external
 )
 
-# ❗ asm 파일만 제거
+# =========================
+# Dobby Android Source Only
+# =========================
+file(GLOB_RECURSE DOBBY_SRC
+    ${dobby_SOURCE_DIR}/source/Backend/UserMode/*.cc
+    ${dobby_SOURCE_DIR}/source/Backend/UserMode/*.cpp
+
+    ${dobby_SOURCE_DIR}/source/InstructionRelocation/*.cc
+    ${dobby_SOURCE_DIR}/source/InstructionRelocation/*.cpp
+
+    ${dobby_SOURCE_DIR}/source/InterceptRouting/*.cc
+    ${dobby_SOURCE_DIR}/source/InterceptRouting/*.cpp
+
+    ${dobby_SOURCE_DIR}/source/TrampolineBridge/*.cc
+    ${dobby_SOURCE_DIR}/source/TrampolineBridge/*.cpp
+
+    ${dobby_SOURCE_DIR}/source/core/*.cc
+    ${dobby_SOURCE_DIR}/source/core/*.cpp
+)
+
+# =========================
+# asm 제거
+# =========================
 list(FILTER DOBBY_SRC EXCLUDE REGEX ".*\\.asm$")
+list(FILTER DOBBY_SRC EXCLUDE REGEX ".*darwin.*")
+list(FILTER DOBBY_SRC EXCLUDE REGEX ".*ios.*")
+list(FILTER DOBBY_SRC EXCLUDE REGEX ".*kernel.*")
+list(FILTER DOBBY_SRC EXCLUDE REGEX ".*dummy.*")
 
 # =========================
 # Module Source
@@ -53,7 +78,7 @@ file(GLOB SRC_FILES CONFIGURE_DEPENDS
 )
 
 # =========================
-# Shared Library
+# Library
 # =========================
 add_library(${MODULE_NAME} SHARED
     ${SRC_FILES}
@@ -64,9 +89,7 @@ add_library(${MODULE_NAME} SHARED
 # Include
 # =========================
 target_include_directories(${MODULE_NAME} PRIVATE
-    ${dobby_SOURCE_DIR}/include
-    ${dobby_SOURCE_DIR}/source
-    ${dobby_SOURCE_DIR}
+    ${DOBBY_INCLUDE}
 )
 
 # =========================
@@ -77,7 +100,7 @@ target_link_libraries(${MODULE_NAME}
 )
 
 # =========================
-# Compile Options
+# Compile Option
 # =========================
 target_compile_options(${MODULE_NAME} PRIVATE
     -O3
