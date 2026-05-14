@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project(zygisk-test LANGUAGES C CXX)
 
-# =========================
-# C / C++
-# =========================
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 20)
 
@@ -31,15 +28,11 @@ include(FetchContent)
 FetchContent_Declare(
     dobby
     GIT_REPOSITORY https://github.com/jmpews/Dobby.git
-
-    # 안정 커밋 권장
-    GIT_TAG 5637b3c
-
+    GIT_TAG master
     GIT_SHALLOW TRUE
 )
 
-# ❗ MakeAvailable 쓰지 말 것
-# Dobby 자체 CMake 빌드 방지
+# ❗ Dobby 자체 빌드 금지
 FetchContent_Populate(dobby)
 
 # =========================
@@ -51,7 +44,7 @@ file(GLOB_RECURSE DOBBY_SRC
 )
 
 # =========================
-# ARM64 ASM 제거
+# ASM 제거
 # =========================
 list(FILTER DOBBY_SRC EXCLUDE REGEX ".*\\.asm$")
 list(FILTER DOBBY_SRC EXCLUDE REGEX ".*arm64.*")
@@ -64,7 +57,7 @@ file(GLOB SRC_FILES CONFIGURE_DEPENDS
 )
 
 # =========================
-# Library
+# Shared Library
 # =========================
 add_library(${MODULE_NAME} SHARED
     ${SRC_FILES}
@@ -88,26 +81,14 @@ target_link_libraries(${MODULE_NAME}
 )
 
 # =========================
-# Compile Options
+# Compile Option
 # =========================
 target_compile_options(${MODULE_NAME} PRIVATE
     -O3
     -fno-exceptions
     -fno-rtti
-    -fno-stack-protector
-    -fomit-frame-pointer
-    -ffunction-sections
-    -fdata-sections
     -Wno-unused-variable
     -Wno-unused-value
-)
-
-# =========================
-# Linker Options
-# =========================
-target_link_options(${MODULE_NAME} PRIVATE
-    -Wl,--gc-sections
-    -Wl,--exclude-libs,ALL
 )
 
 # =========================
@@ -117,20 +98,3 @@ set_target_properties(${MODULE_NAME} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN YES
 )
-
-# =========================
-# Android
-# =========================
-if(ANDROID)
-
-    target_compile_definitions(${MODULE_NAME} PRIVATE
-        ANDROID
-    )
-
-endif()
-
-message(STATUS "====================================")
-message(STATUS "Module Name : ${MODULE_NAME}")
-message(STATUS "Build Type  : ${CMAKE_BUILD_TYPE}")
-message(STATUS "ABI         : ${ANDROID_ABI}")
-message(STATUS "====================================")
