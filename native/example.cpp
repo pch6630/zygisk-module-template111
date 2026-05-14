@@ -1,10 +1,11 @@
 #include <jni.h>
-#include <string>
 #include <thread>
 #include <chrono>
 #include <random>
 #include <dlfcn.h>
 #include <cstring>
+#include <unistd.h>
+#include <stdint.h>
 
 #include "zygisk.hpp"
 #include "dobby.h"
@@ -12,74 +13,123 @@
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
 
-// 원래 함수 포인터
-float (*old_get_Atk)(void* instance);
+// ==========================
+// RVA (여기만 업데이트하면 됨)
+// ==========================
 
-// 랜덤 데미지
+#define RVA_get_Atk 0x2B45210  // 예시 (GetCriticalRate 대신 get_Atk로 바꿔도 됨)
+
+// ==========================
+// original function pointer
+// ==========================
+
+float (*old_get_Atk)(void* instance) = nullptr;
+
+// ==========================
+// hook function
+// ==========================
+
 float new_get_Atk(void* instance) {
-    static std::default_random_engine generator(
+
+    static std::default_random_engine gen(
         std::chrono::system_clock::now().time_since_epoch().count()
     );
 
-    std::uniform_real_distribution<float> distribution(2000.0f, 4000.0f);
-    return distribution(generator);
+    std::uniform_real_distribution<float> dist(2000.0f, 4000.0f);
+
+    return dist(gen);
 }
 
-// 후킹 스레드
-void hack_thread() {
-    void* handle = nullptr;
+// ==========================
+// get lib base
+// ==========================
 
-    // libil2cpp 로드 대기
-    while (!handle) {
-        handle = dlopen("libil2cpp.so", RTLD_NOW | RTLD_LOCAL);
-        if (!handle) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+uintptr_t get_lib_base(const char* lib) {
+
+    FILE* fp = fopen("/proc/self/maps", "r");
+    if (!fp) return 0;
+
+    char line[512];
+
+    while (fgets(line, sizeof(line), fp)) {
+
+        if (strstr(line, lib)) {
+
+            uintptr_t base =
+                strtoull(line, nullptr, 16);
+
+            fclose(fp);
+            return base;
         }
     }
 
-    // il2cpp resolve icall 가져오기
-    typedef void* (*t_il2cpp_resolve_icall)(const char*);
-    auto il2cpp_resolve_icall =
-        (t_il2cpp_resolve_icall)dlsym(handle, "il2cpp_resolve_icall");
+    fclose(fp);
+    return 0;
+}
 
-    if (!il2cpp_resolve_icall) return;
+// ==========================
+// hook thread
+// ==========================
 
-    void* target_addr =
-        il2cpp_resolve_icall("CommonAttribute::get_Atk");
+void hack_thread() {
 
-    if (target_addr) {
+    uintptr_t base = 0;
+
+    // libil2cpp 로드 대기
+    while (!base) {
+        base = get_lib_base("libil2cpp.so");
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
+
+    uintptr_t target_addr = base + RVA_get_Atk;
+
+    if (!target_addr) return;
+
+    // hook (1회만 실행되게)
+    static bool hooked = false;
+
+    if (!hooked) {
+
         DobbyHook(
-            target_addr,
+            (void*)target_addr,
             (void*)new_get_Atk,
             (void**)&old_get_Atk
         );
+
+        hooked = true;
     }
 }
 
+// ==========================
+// Zygisk Module
+// ==========================
+
 class MyModule : public zygisk::ModuleBase {
+
 public:
-    void onLoad(Api *api, JNIEnv *env) override {
+
+    void onLoad(Api* api, JNIEnv* env) override {
         this->api = api;
         this->env = env;
     }
 
-    void preAppSpecialize(AppSpecializeArgs *args) override {
-        const char *process =
+    void preAppSpecialize(AppSpecializeArgs* args) override {
+
+        const char* name =
             env->GetStringUTFChars(args->nice_name, nullptr);
 
-        if (process && strstr(process, "com.crunchyroll.bleachsoulres")) {
-
-            // ❌ 삭제됨: setOption(DLCLOSE_PROTECT_HANDLE)
+        if (name &&
+            strstr(name, "com.crunchyroll.bleachsoulres")) {
 
             std::thread(hack_thread).detach();
         }
 
-        env->ReleaseStringUTFChars(args->nice_name, process);
+        env->ReleaseStringUTFChars(args->nice_name, name);
     }
 
 private:
-    Api *api;
-    JNIEnv *env;
+    Api* api;
+    JNIEnv* env;
 };
 
 REGISTER_ZYGISK_MODULE(MyModule)
