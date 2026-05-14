@@ -9,10 +9,8 @@ set(CMAKE_CXX_STANDARD 20)
 # 기본 옵션
 # ==========================================
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-
 add_compile_options(
+    -fPIC
     -fvisibility=hidden
 )
 
@@ -38,23 +36,20 @@ FetchContent_Populate(dobby)
 set(DOBBY ${dobby_SOURCE_DIR})
 
 # ==========================================
-# Dobby 최소 Android ARM64 소스만 사용
+# Android ARM64 전용 최소 소스
 # ==========================================
 
 set(DOBBY_SRC
 
-    # core
+    # main
     ${DOBBY}/source/dobby.cpp
-
-    # assembler
-    ${DOBBY}/source/core/assembler/assembler-arm64.cc
-
-    # instruction relocator
-    ${DOBBY}/source/InstructionRelocation/arm64/InstructionRelocationARM64.cc
 
     # interceptor
     ${DOBBY}/source/InterceptRouting/InterceptRouting.cpp
     ${DOBBY}/source/InterceptRouting/InterceptRoutingEntry.cpp
+
+    # arm64 instruction relocation
+    ${DOBBY}/source/InstructionRelocation/arm64/InstructionRelocationARM64.cc
 
     # trampoline
     ${DOBBY}/source/TrampolineBridge/Trampoline/trampoline_arm64.cc
@@ -62,11 +57,11 @@ set(DOBBY_SRC
     # closure bridge
     ${DOBBY}/source/TrampolineBridge/ClosureBridge/arm64/closure_bridge_arm64.cc
 
-    # memory
+    # memory allocator
     ${DOBBY}/source/MemoryAllocator/MemoryAllocator.cc
     ${DOBBY}/source/MemoryAllocator/NearMemoryArena.cc
 
-    # platform
+    # exec memory
     ${DOBBY}/source/Backend/UserMode/ExecMemory/code-patch-tool-posix.cc
 
     # symbol resolver
@@ -82,7 +77,7 @@ file(GLOB SRC_FILES CONFIGURE_DEPENDS
 )
 
 # ==========================================
-# 라이브러리
+# Library
 # ==========================================
 
 add_library(${MODULE_NAME} SHARED
