@@ -4,6 +4,15 @@ import json
 import sys
 import shutil
 import zipfile
+
+from hashlib import sha256
+from pathlib import Path
+from argparse import ArgumentParser
+
+MODULE_ID = "zygisk-test"
+MODULE_NAME = "Zygisk Test"
+VER_NAME = "1"
+
 SUPPORTED_ABIS = [
     'arm64-v8a'
 ]
@@ -18,11 +27,14 @@ ABI_MAP = {
     None: None
 }
 
+
 def initialize_abi_alias():
     for k in ABI_NAME_ALIAS:
         ABI_MAP[k] = k
+
         for v in ABI_NAME_ALIAS[k]:
             ABI_MAP[v] = k
+
 
 initialize_abi_alias()
 
@@ -47,12 +59,129 @@ BUILD_TYPE_CHOICES_MAP = {
 }
 
 
+def exec_out(cmd):
+    p = sp.Popen(cmd, stdout=sp.PIPE)
+
+    content = p.stdout.read().decode('utf-8').strip()
+
+    p.wait()
+
+    return content
+
+
+def exec_cmd(cmd, ignore_error=False, *args, **kwargs):
+    p = sp.Popen(cmd, *args, **kwargs)
+
+    v = p.wait()
+
+    if not ignore_error and v != 0:
+        raise RuntimeError(f'exec return non-zero: {v} {cmd}')
+
+
+GIT_COMMIT_COUNT = int(
+    exec_out('git rev-list HEAD --count'.split(' '))
+)
+
+GIT_COMMIT_HASH = exec_out(
+    'git rev-parse --verify --short HEAD'.split(' ')
+)
+
+
+def initialize(args):
+    global ANDROID_HOME
+    global ANDROID_NDK_HOME
+    global PLATFORM
+    global CMAKE_TOOLCHAIN_FILE
+    global ROOT_DIR
+    global BUILD_DIR
+    global OUTPUT_DIR
+    global SOURCE_DIR
+    global RELEASE_NAME
+    global NATIVE_OUTPUT_DIR
+    global BIN_OUTPUT_DIR
+    global LIB_OUTPUT_DIR
+    global BUILD_TYPE
+    global UNSTRIPPED_OUTPUT_DIR
+    global RELEASE_DIR
+    global BUILD_DIR_NAME
+
+    ANDROID_HOME = os.getenv('ANDROID_HOME')
+
+    if ANDROID_HOME is None:
+        ANDROID_HOME = os.getenv('ANDROID_SDK_ROOT')
+
+    if ANDROID_HOME is not None:
+        ANDROID_HOME = Path(ANDROID_HOME)
+
+    with open('project-config.json', 'r', encoding='utf-8') as f:
+        project_config = json.load(f)
+
+        if args.ndk:
+            ndk_ver = args.ndk
+        else:
+            ndk_ver = project_config['ndkVer']
+
+        ANDROID_NDK_HOME = os.getenv('ANDROID_NDK_HOME')
+
+        if ANDROID_NDK_HOME is None:
+            if ANDROID_HOME is None:
+                raise ValueError(
+                    'ANDROID_HOME or ANDROID_NDK_HOME required!'
+                )
+
+            ANDROID_NDK_HOME = ANDROID_HOME / 'ndk' / ndk_ver
+        else:
+            ANDROID_NDK_HOME = Path(ANDROID_NDK_HOME)
+
+        PLATFORM = project_config['platform']
+
+    CMAKE_TOOLCHAIN_FILE = (
+        ANDROID_NDK_HOME /
+        'build/cmake/android.toolchain.cmake'
+    )
+
+    BUILD_TYPE = args.build_type
+
+    ROOT_DIR = Path(__file__).parent.resolve()
+
+    BUILD_DIR = (ROOT_DIR / "my_build").absolute()
+
+    OUTPUT_DIR = (ROOT_DIR / "output").absolute()
+
+    BUILD_DIR_NAME = BUILD_TYPE
+
+    NATIVE_OUTPUT_DIR = (
+        OUTPUT_DIR /
+        "native" /
+        BUILD_DIR_NAME
+    )
+
+    BIN_OUTPUT_DIR = NATIVE_OUTPUT_DIR / "bin"
+
+    LIB_OUTPUT_DIR = NATIVE_OUTPUT_DIR / "lib"
+
+    UNSTRIPPED_OUTPUT_DIR = (
+        OUTPUT_DIR /
+        "unstripped" /
+        BUILD_DIR_NAME
+    )
+
+    RELEASE_DIR = ROOT_DIR / "release"
+
+    SOURCE_DIR = ROOT_DIR / "native"
+
+    RELEASE_NAME = VER_NAME
+
+
 def config(abi, plat, build_type):
     bin_build_type = BUILD_TYPE_CHOICES_MAP[build_type]
 
     build_dir = BUILD_DIR / BUILD_DIR_NAME / abi
+
     lib_output_dir = LIB_OUTPUT_DIR / abi
+
     bin_output_dir = BIN_OUTPUT_DIR / abi
+
     unstripped_output_dir = UNSTRIPPED_OUTPUT_DIR / abi
 
     exec_cmd(
@@ -78,12 +207,47 @@ def config(abi, plat, build_type):
             f'-DDEBUG_SYMBOLS_PATH={unstripped_output_dir}',
 
             f'-DCMAKE_BUILD_TYPE={bin_build_type}',
+
             f'-DMODULE_NAME={MODULE_ID}',
 
             '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON',
 
             '-G',
             'Ninja'
+        ]
+    )
+
+
+def build_all(abi, plat, build_type, force):
+    lib_output_dir = LIB_OUTPUT_DIR / abi
+
+    bin_output_dir = BIN_OUTPUT_DIR / abi
+
+    if force:
+        shutil.rmtree(lib_output_dir, ignore_errors=True)
+
+        shutil.rmtree(bin_output_dir, ignore_errors=True)
+
+        shutil.rmtree(
+            UNSTRIPPED_OUTPUT_DIR / abi,
+            ignore_errors=True
+        )
+
+    build_dir = BUILD_DIR / BUILD_DIR_NAME / abi
+
+    config(
+        abi,
+        plat,
+        build_type=build_type
+    )
+
+    exec_cmd(
+        [
+            'cmake',
+            '--build',
+            build_dir,
+            '--',
+            f'-j{os.cpu_count()}'
         ]
     )
 
@@ -100,84 +264,23 @@ def build_zip(args):
         )
 
     module_path = OUTPUT_DIR / "module" / BUILD_DIR_NAME
+
     module_template = ROOT_DIR / 'template'
 
     shutil.rmtree(module_path, ignore_errors=True)
 
     os.makedirs(module_path, exist_ok=True)
 
-    def fix_crlf(p: Path):
-        with open(p, 'r', encoding='utf-8') as f:
-            text = f.read()
-            text = text.replace('\r', '').encode('utf-8')
+    shutil.copytree(
+        module_template,
+        module_path,
+        dirs_exist_ok=True
+    )
 
-        with open(p, 'wb') as f:
-            f.write(text)
-
-    def expand_text_file(p: Path, expand=None):
-        if not p.exists():
-            return
-
-        with open(p, 'r', encoding='utf-8') as f:
-            text = f.read()
-
-            if expand:
-                for k in expand:
-                    v = expand[k]
-
-                    text = text.replace(f'@{k}@', v)
-                    text = text.replace(f'${{{k}}}', v)
-
-        with open(p, 'wb') as f:
-            f.write(text.encode('utf-8'))
-
-    shutil.copytree(module_template, module_path, dirs_exist_ok=True)
-
-    shutil.copy(ROOT_DIR / 'README.md', module_path / 'README.md')
-
-    for p, _, fns in module_path.walk():
-        for fn in fns:
-            if fn == 'mazoku':
-                continue
-
-            fix_crlf(p / fn)
-
-    expand_text_file(module_path / 'module.prop', {
-        'moduleId': MODULE_ID,
-        'moduleName': MODULE_NAME,
-        'versionName': f"{RELEASE_NAME} ({GIT_COMMIT_COUNT}-{GIT_COMMIT_HASH}-{build_type})",
-        'versionCode': str(GIT_COMMIT_COUNT)
-    })
-
-    script_vars = {
-        'DEBUG': str(build_type == 'debug'),
-        'SONAME': MODULE_ID,
-        'SUPPORTED_ABIS': ' '.join(
-            map(lambda x: ABI_TO_MAGISK_ARCH[x], SUPPORTED_ABIS)
-        )
-    }
-
-    expand_text_file(module_path / 'customize.sh', script_vars)
-    expand_text_file(module_path / 'post-fs-data.sh', script_vars)
-    expand_text_file(module_path / 'service.sh', script_vars)
-    expand_text_file(module_path / 'uninstall.sh', script_vars)
-    expand_text_file(module_path / 'cleanup.sh', script_vars)
-
-    with open(module_path / 'sepolicy.rule', 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    with open(module_path / 'sepolicy.rule', 'w', encoding='utf-8') as f:
-        f.write(
-            '\n'.join(
-                filter(
-                    lambda x: not (
-                        x.strip().startswith('#') or
-                        x.strip() == ''
-                    ),
-                    content.split('\n')
-                )
-            ) + '\n'
-        )
+    shutil.copy(
+        ROOT_DIR / 'README.md',
+        module_path / 'README.md'
+    )
 
     shutil.copytree(
         NATIVE_OUTPUT_DIR,
@@ -241,3 +344,45 @@ def build_zip(args):
     print(f"* output {output_path}")
 
     return output_path
+
+
+def zip_cmd(args):
+    build_zip(args)
+
+
+def main():
+    ap = ArgumentParser()
+
+    ap.add_argument(
+        '--ndk',
+        dest='ndk',
+        required=False
+    )
+
+    ap.add_argument(
+        '--force',
+        dest='force',
+        action='store_true'
+    )
+
+    ap.add_argument(
+        '-t',
+        dest='build_type',
+        choices=BUILD_TYPE_CHOICES,
+        default='release'
+    )
+
+    subps = ap.add_subparsers(required=True)
+
+    zip_args = subps.add_parser('zip')
+
+    zip_args.set_defaults(func=zip_cmd)
+
+    args = ap.parse_args(sys.argv[1:])
+
+    initialize(args)
+
+    args.func(args)
+
+
+main()
