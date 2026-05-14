@@ -6,20 +6,19 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 20)
 
 # =========================
-# Global compile options
+# 기본 컴파일 옵션
 # =========================
 add_compile_options(
     -fvisibility=hidden
-    -fno-exceptions
-    -fno-rtti
+    -fPIC
 )
 
 add_compile_definitions(
-    DOBBY_DISABLE_ARM64_ASM
+    MODULE_NAME="${MODULE_NAME}"
 )
 
 # =========================
-# Fetch Dobby
+# FetchContent Dobby
 # =========================
 include(FetchContent)
 
@@ -33,26 +32,32 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(dobby)
 
 # =========================
-# IMPORTANT: Dobby options FIX
+# ❗ 핵심: ARM64 ASM 제거 (진짜 해결)
 # =========================
-set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
-set(DOBBY_BUILD_SHARED OFF CACHE BOOL "" FORCE)
-set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
 
-# (옵션 이름 수정: Plugin.SymbolResolver → 실제는 DOBBY 옵션 아님)
-set(DOBBY_SYMBOL_RESOLVER OFF CACHE BOOL "" FORCE)
+# Dobby 소스 중 arm64 asm 제거
+file(GLOB DOBBY_SRC
+    ${dobby_SOURCE_DIR}/source/**/*.cpp
+    ${dobby_SOURCE_DIR}/source/**/*.cc
+)
+
+# arm64 asm 파일 완전 제외
+list(FILTER DOBBY_SRC EXCLUDE REGEX ".*arm64.*\\.asm")
 
 # =========================
-# Source Files
+# Module Source
 # =========================
 file(GLOB SRC_FILES CONFIGURE_DEPENDS
     *.cpp
 )
 
 # =========================
-# Module
+# Library
 # =========================
-add_library(${MODULE_NAME} SHARED ${SRC_FILES})
+add_library(${MODULE_NAME} SHARED
+    ${SRC_FILES}
+    ${DOBBY_SRC}
+)
 
 target_include_directories(${MODULE_NAME} PRIVATE
     ${dobby_SOURCE_DIR}/include
@@ -60,13 +65,14 @@ target_include_directories(${MODULE_NAME} PRIVATE
 )
 
 target_link_libraries(${MODULE_NAME}
-    dobby
     log
 )
 
 target_compile_options(${MODULE_NAME} PRIVATE
-    -Wno-unused-value
+    -fno-exceptions
+    -fno-rtti
     -Wno-unused-variable
+    -Wno-unused-value
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
