@@ -1,24 +1,28 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project(zygisk-test)
-
-enable_language(C CXX ASM)
+project(zygisk-test LANGUAGES C CXX ASM)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+# =========================
+# Global compile options
+# =========================
+add_compile_options(
+    -fvisibility=hidden
+    -fno-exceptions
+    -fno-rtti
+)
 
-# 어셈블리 에러 우회 플래그
-add_definitions(-DDOBBY_DISABLE_ARM64_ASM)
-add_compile_definitions(DOBBY_DISABLE_ARM64_ASM)
+add_compile_definitions(
+    DOBBY_DISABLE_ARM64_ASM
+)
 
+# =========================
+# Fetch Dobby
+# =========================
 include(FetchContent)
 
-# ========================================================
-# Dobby (★ 아래 굵은 글씨의 주소 공백을 모두 지워서 붙여주세요)
-# ========================================================
 FetchContent_Declare(
     dobby
     GIT_REPOSITORY https://github.com/jmpews/Dobby.git
@@ -26,17 +30,22 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
-# Dobby 내부 옵션 제어
-set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
-set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
-set(Plugin.SymbolResolver OFF CACHE BOOL "" FORCE)
-
 FetchContent_MakeAvailable(dobby)
+
+# =========================
+# IMPORTANT: Dobby options FIX
+# =========================
+set(DOBBY_BUILD_TEST OFF CACHE BOOL "" FORCE)
+set(DOBBY_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(DOBBY_GENERATE_SHARED OFF CACHE BOOL "" FORCE)
+
+# (옵션 이름 수정: Plugin.SymbolResolver → 실제는 DOBBY 옵션 아님)
+set(DOBBY_SYMBOL_RESOLVER OFF CACHE BOOL "" FORCE)
 
 # =========================
 # Source Files
 # =========================
-file(GLOB SRC_FILES
+file(GLOB SRC_FILES CONFIGURE_DEPENDS
     *.cpp
 )
 
@@ -47,6 +56,7 @@ add_library(${MODULE_NAME} SHARED ${SRC_FILES})
 
 target_include_directories(${MODULE_NAME} PRIVATE
     ${dobby_SOURCE_DIR}/include
+    ${dobby_SOURCE_DIR}/source
 )
 
 target_link_libraries(${MODULE_NAME}
@@ -57,8 +67,6 @@ target_link_libraries(${MODULE_NAME}
 target_compile_options(${MODULE_NAME} PRIVATE
     -Wno-unused-value
     -Wno-unused-variable
-    -fno-exceptions
-    -fno-rtti
 )
 
 set_target_properties(${MODULE_NAME} PROPERTIES
