@@ -112,9 +112,5 @@ private:
     JNIEnv* env;
 };
 
-// [교정] 순정 Zygisk 매크로만 깔끔하게 남겨 에러를 완벽히 차단합니다.
+// 지저분한 하단 찌꺼기 코드를 지우고 순정 매크로 1줄만 남깁니다.
 REGISTER_ZYGISK_MODULE(MyModule)
-
-// [보정] 숨겨진 진입점 심볼(zygisk_module_entry)을 컴파일러가 강제로 노출하도록 힌트 추가
-extern "C" __attribute__((visibility("default"))) __attribute__((used)) 
-void zygisk_module_entry(zygisk::Api *api, JNIEnv *env);
