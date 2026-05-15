@@ -10,27 +10,9 @@
 #include "zygisk.hpp"
 
 // =================================================================
-// 📦 Dobby 인터페이스 내장 (기존 #include "dobby.h" 대체)
+// 🔗 진짜 안드로이드용 Dobby 라이브러리와 연결하기 위한 외부 선언
 // =================================================================
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// 실제 GitHub Actions 빌드 통과 및 링킹 에러를 방지하기 위한 함수 스텁 정의
-int DobbyHook(void *address, void *replace_call, void **origin_call) {
-    if (!address || !replace_call) return -1;
-    // Android 시스템 런타임에 주입 시 메모리 변조를 실행할 수 있도록 인터페이스를 유지합니다.
-    return 0; 
-}
-
-int DobbyDestroy(void *address) { return 0; }
-void *dobby_malloc(size_t size) { return malloc(size); }
-void dobby_free(void *ptr) { free(ptr); }
-
-#ifdef __cplusplus
-}
-#endif
-// =================================================================
+extern "C" int DobbyHook(void *address, void *replace_call, void **origin_call);
 
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
@@ -38,7 +20,7 @@ using zygisk::AppSpecializeArgs;
 // ==========================
 // RVA (여기만 업데이트하면 됨)
 // ==========================
-#define RVA_get_Atk 0x2B45210  // 예시 (GetCriticalRate 대신 get_Atk로 바꿔도 됨)
+#define RVA_get_Atk 0x2B45210  // 예시 주소
 
 // ==========================
 // original function pointer
