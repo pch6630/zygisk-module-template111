@@ -1,6 +1,7 @@
-id=bleach_auto_mod
+id=zygisk-test
 name=Bleach Resonance Auto Damage
 version=v1.0.0
-versionCode=1
+versionCode=100
 author=YourName
 description=Zygisk module with auto-offset detection for damage.
+zygisk=true
