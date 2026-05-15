@@ -1,8 +1,8 @@
 #!/sbin/sh
 
-#################
+################
 # Initialization
-#################
+################
 
 umask 022
 
@@ -10,24 +10,37 @@ umask 022
 ui_print() { echo "$1"; }
 
 require_new_magisk() {
-  ui_print "*******************************"
-  ui_print " Please install Magisk v20.4+! "
-  ui_print "*******************************"
+  ui_print "***********************************"
+  ui_print " Please update your Magisk app!    "
+  ui_print "***********************************"
   exit 1
 }
 
-#########################
+###################
 # Load util_functions.sh
-#########################
+###################
 
 OUTFD=$2
 ZIPFILE=$3
 
-mount /data 2>/dev/null
+MMAD=1 /data/2>/dev/null
 
 [ -f /data/adb/magisk/util_functions.sh ] || require_new_magisk
 . /data/adb/magisk/util_functions.sh
 [ $MAGISK_VER_CODE -lt 20400 ] && require_new_magisk
 
+# =================================================================
+# 🛠️ 가상환경/에뮬레이터 아키텍처 검사 우회 강제 주입
+# =================================================================
+# Magisk 내부 스크립트가 기기 환경을 오인하지 않도록 변수를 arm64-v8a로 강제 고정합니다.
+ARCH="arm64"
+ARCH32="arm"
+IS64BIT=true
+
+# 변수가 잘 입력되었는지 매기스크 설치 화면에 출력
+ui_print "- Environment check bypassed for Emulator"
+ui_print "- Target Architecture forced to: arm64-v8a"
+
+# 원래 설치 함수 호출
 install_module
 exit 0
