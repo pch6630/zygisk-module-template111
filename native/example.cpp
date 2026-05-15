@@ -53,7 +53,7 @@ uintptr_t get_lib_base(const char* lib) {
     while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, lib)) {
             base = strtoull(line, nullptr, 16);
-            break; // [보정] 자원 반환 누락 방지를 위해 루프를 깨고 나가도록 수정
+            break;
         }
     }
 
@@ -112,13 +112,9 @@ private:
     JNIEnv* env;
 };
 
-// [보정] 컴파일러 최적화로 인해 Zygisk 진입점 함수가 외부로 노출되지 않는 현상을 방지
-// Magisk 가 인식할 수 있도록 진입 심볼 강제 공개(Export) 속성 부여
-#undef REGISTER_ZYGISK_MODULE
-#define REGISTER_ZYGISK_MODULE(clazz) \
-    extern "C" __attribute__((visibility("default"))) __attribute__((used)) \
-    void zygisk_module_entry(zygisk::Api *api, JNIEnv *env) { \
-        api->registerModule(new clazz()); \
-    }
-
+// [교정] 순정 Zygisk 매크로만 깔끔하게 남겨 에러를 완벽히 차단합니다.
 REGISTER_ZYGISK_MODULE(MyModule)
+
+// [보정] 숨겨진 진입점 심볼(zygisk_module_entry)을 컴파일러가 강제로 노출하도록 힌트 추가
+extern "C" __attribute__((visibility("default"))) __attribute__((used)) 
+void zygisk_module_entry(zygisk::Api *api, JNIEnv *env);
