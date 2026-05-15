@@ -47,18 +47,18 @@ uintptr_t get_lib_base(const char* lib) {
     FILE* fp = fopen("/proc/self/maps", "r");
     if (!fp) return 0;
 
-    char line[512]; // [교정] 단일 문자 'char line' 오타를 문자 배열 'char line[512]'로 수정
+    char line[512];
+    uintptr_t base = 0;
 
     while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, lib)) {
-            uintptr_t base = strtoull(line, nullptr, 16);
-            fclose(fp);
-            return base;
+            base = strtoull(line, nullptr, 16);
+            break; // [보정] 자원 반환 누락 방지를 위해 루프를 깨고 나가도록 수정
         }
     }
 
     fclose(fp);
-    return 0;
+    return base;
 }
 
 // ==========================
@@ -74,20 +74,15 @@ void hack_thread() {
     }
 
     uintptr_t target_addr = base + RVA_CalcDamage;
-
     if (!target_addr) return;
 
-    // hook (1회만 실행)
     static bool hooked = false;
-
     if (!hooked) {
-        // [교정] 존재하지 않는 'new_get_Atk' 호출 코드를 삭제하고 진짜 함수 하나만 정확히 조준합니다.
         DobbyHook(
             (void*)target_addr,
             (void*)new_CalcDamage,
             (void**)&old_CalcDamage
         );
-
         hooked = true;
     }
 }
@@ -116,5 +111,14 @@ private:
     Api* api;
     JNIEnv* env;
 };
+
+// [보정] 컴파일러 최적화로 인해 Zygisk 진입점 함수가 외부로 노출되지 않는 현상을 방지
+// Magisk 가 인식할 수 있도록 진입 심볼 강제 공개(Export) 속성 부여
+#undef REGISTER_ZYGISK_MODULE
+#define REGISTER_ZYGISK_MODULE(clazz) \
+    extern "C" __attribute__((visibility("default"))) __attribute__((used)) \
+    void zygisk_module_entry(zygisk::Api *api, JNIEnv *env) { \
+        api->registerModule(new clazz()); \
+    }
 
 REGISTER_ZYGISK_MODULE(MyModule)
