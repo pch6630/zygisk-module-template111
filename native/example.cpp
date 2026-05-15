@@ -31,15 +31,12 @@ int (*old_CalcDamage)(void* instance, void* arg1, void* arg2) = nullptr;
 // hook function (2000 ~ 3500 난수 변조)
 // ==========================
 int new_CalcDamage(void* instance, void* arg1, void* arg2) {
-    // 매 시점 정밀한 시간값을 시드로 사용하여 난수 엔진 초기화
     static std::default_random_engine gen(
         std::chrono::system_clock::now().time_since_epoch().count()
     );
 
-    // 2000 이상 3500 이하의 정수형 난수 범위 설정
     std::uniform_int_distribution<int> dist(2000, 3500);
 
-    // 범위 내의 무작위 데미지를 반환
     return dist(gen);
 }
 
@@ -50,7 +47,7 @@ uintptr_t get_lib_base(const char* lib) {
     FILE* fp = fopen("/proc/self/maps", "r");
     if (!fp) return 0;
 
-    char line[512]; // 문자 배열 버그 교정 완료
+    char line[512]; // [교정] 단일 문자 'char line' 오타를 문자 배열 'char line[512]'로 수정
 
     while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, lib)) {
@@ -84,13 +81,7 @@ void hack_thread() {
     static bool hooked = false;
 
     if (!hooked) {
-        DobbyHook(
-            (void*)target_addr,
-            (void*)new_get_Atk, // 컴파일러 검색 대상 매칭 유지를 위한 기존 심볼 호환
-            (void**)&old_CalcDamage
-        );
-
-        // 정밀한 링킹을 위해 실제 타겟 함수 주소로 바인딩 유도
+        // [교정] 존재하지 않는 'new_get_Atk' 호출 코드를 삭제하고 진짜 함수 하나만 정확히 조준합니다.
         DobbyHook(
             (void*)target_addr,
             (void*)new_CalcDamage,
