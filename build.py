@@ -44,8 +44,11 @@ ABI_TO_ARCH = {
     'arm64-v8a': 'aarch64',
 }
 
+# =================================================================
+# 🛠️ [교정 1] 매기스크 인식 규격을 arm64에서 arm64-v8a로 교정
+# =================================================================
 ABI_TO_MAGISK_ARCH = {
-    'arm64-v8a': 'arm64',
+    'arm64-v8a': 'arm64-v8a',
 }
 
 BUILD_TYPE_CHOICES = [
@@ -282,11 +285,21 @@ def build_zip(args):
         module_path / 'README.md'
     )
 
-    shutil.copytree(
-        NATIVE_OUTPUT_DIR,
-        module_path,
-        dirs_exist_ok=True
-    )
+    # =================================================================
+    # 🛠️ [교정 2] 복사 구조 강제 변경 (lib/ 폴더를 매기스크 zygisk/ 규격으로 이전)
+    # =================================================================
+    for abi in SUPPORTED_ABIS:
+        magisk_arch = ABI_TO_MAGISK_ARCH.get(abi, 'arm64-v8a')
+        src_lib_dir = LIB_OUTPUT_DIR / abi
+        target_zygisk_dir = module_path / "zygisk" / magisk_arch
+        
+        if src_lib_dir.exists():
+            os.makedirs(target_zygisk_dir, exist_ok=True)
+            for item in os.listdir(src_lib_dir):
+                s = src_lib_dir / item
+                d = target_zygisk_dir / item
+                if s.is_file():
+                    shutil.copy2(s, d)
 
     build_name = (
         f'{MODULE_NAME}-{RELEASE_NAME}-'
