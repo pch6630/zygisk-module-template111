@@ -17,32 +17,17 @@ extern "C" int DobbyHook(void *address, void *replace_call, void **origin_call);
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
 
-// ==========================
-// RVA (데미지 함수 주소)
-// ==========================
 #define RVA_CalcDamage 0x2B41A50
-
-// ==========================
-// original function pointer
-// ==========================
 int (*old_CalcDamage)(void* instance, void* arg1, void* arg2) = nullptr;
 
-// ==========================
-// hook function (2000 ~ 3500 난수 변조)
-// ==========================
 int new_CalcDamage(void* instance, void* arg1, void* arg2) {
     static std::default_random_engine gen(
         std::chrono::system_clock::now().time_since_epoch().count()
     );
-
     std::uniform_int_distribution<int> dist(2000, 3500);
-
     return dist(gen);
 }
 
-// ==========================
-// get lib base
-// ==========================
 uintptr_t get_lib_base(const char* lib) {
     FILE* fp = fopen("/proc/self/maps", "r");
     if (!fp) return 0;
@@ -56,18 +41,12 @@ uintptr_t get_lib_base(const char* lib) {
             break;
         }
     }
-
     fclose(fp);
     return base;
 }
 
-// ==========================
-// hook thread
-// ==========================
 void hack_thread() {
     uintptr_t base = 0;
-
-    // libil2cpp 로드 대기
     while (!base) {
         base = get_lib_base("libil2cpp.so");
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -88,7 +67,7 @@ void hack_thread() {
 }
 
 // ==========================
-// Zygisk Module
+// Zygisk Module Class
 // ==========================
 class MyModule : public zygisk::ModuleBase {
 public:
@@ -97,14 +76,18 @@ public:
         this->env = env;
     }
 
-    void preAppSpecialize(AppSpecializeArgs* args) override {
+    void preAppSpecialize(AppSpecializeArgs* args) override {}
+
+    void postAppSpecialize(const AppSpecializeArgs* args) override {
+        if (!args->nice_name) return;
+
         const char* name = env->GetStringUTFChars(args->nice_name, nullptr);
-
-        if (name && strstr(name, "com.crunchyroll.bleachsoulres")) {
-            std::thread(hack_thread).detach();
+        if (name) {
+            if (strstr(name, "com.crunchyroll.bleachsoulres")) {
+                std::thread(hack_thread).detach();
+            }
+            env->ReleaseStringUTFChars(args->nice_name, name);
         }
-
-        env->ReleaseStringUTFChars(args->nice_name, name);
     }
 
 private:
@@ -112,5 +95,4 @@ private:
     JNIEnv* env;
 };
 
-// 지저분한 하단 찌꺼기 코드를 지우고 순정 매크로 1줄만 남깁니다.
 REGISTER_ZYGISK_MODULE(MyModule)
