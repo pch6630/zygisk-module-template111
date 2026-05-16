@@ -1,41 +1,35 @@
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.10.2)
 
-project(zygisk-test LANGUAGES C CXX)
+project("bleach_mod_zygisk")
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 26)
+# ====================================================================
+# [핵심 수정] 가상 환경(Virtual Master) 및 아키텍처 호환성 강제 설정
+# ====================================================================
 
-# [교정] -fvisibility=hidden 옵션을 완전히 지워 Zygisk 진입점이 잘려나가는 문제를 방지합니다.
-add_compile_options(
-    -fPIC
+# 1. 페이지 크기 정렬을 가상 환경 커널 표준인 4KB(4096)로 강제 고정 (호환되지 않는 기기 오류 해결)
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=4096")
+
+# 2. 최소 안드로이드 API 버전을 26(안드로이드 8.0)으로 낮춰 VM 구버전 OS 호환성 확보
+set(ANDROID_PLATFORM android-26)
+
+# 3. C++ 표준 및 런타임 공유 라이브러리 정적 링킹 (가상 환경 내 링킹 에러 방지)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(ANDROID_STL libc++_static)
+
+# ====================================================================
+# 소스 파일 및 라이브러리 빌드 설정
+# ====================================================================
+
+# 모듈에 사용될 소스 파일 지정 (프로젝트 구조에 맞게 파일명 확인)
+add_library(${PROJECT_NAME} SHARED
+        main.cpp
+        hook/hook.cpp
+        utils/logging.cpp
 )
 
-# -----------------------------------------------------------------
-# 📦 업로드한 안드로이드용 진짜 Dobby(libdobby.a) 연동
-# -----------------------------------------------------------------
-set(DOBBY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dobby")
-
-add_library(dobby STATIC IMPORTED)
-set_target_properties(dobby PROPERTIES
-    IMPORTED_LOCATION "${DOBBY_DIR}/libdobby.a"
-)
-
-# -----------------------------------------------------------------
-# 🛠️ Zygisk 메인 모듈 빌드
-# -----------------------------------------------------------------
-file(GLOB SRC_FILES CONFIGURE_DEPENDS *.cpp)
-
-add_library(${MODULE_NAME} SHARED
-    ${SRC_FILES}
-)
-
-target_link_libraries(${MODULE_NAME}
-    dobby
-    log
-)
-
-# [교정] 속성 제어부에서도 진입점을 숨기는 설정을 제거(YES -> NO)하여 호환성 에러를 완벽히 해결합니다.
-set_target_properties(${MODULE_NAME} PROPERTIES
-    CXX_VISIBILITY_PRESET default
-    VISIBILITY_INLINES_HIDDEN NO
+# 안드로이드 로그 라이브러리 등 시스템 라이브러리 링크
+target_link_libraries(${PROJECT_NAME}
+        log
+        android
 )
