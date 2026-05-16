@@ -17,7 +17,7 @@ extern "C" int DobbyHook(void *address, void *replace_call, void **origin_call);
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
 
-#define RVA_CalcDamage 0x2B41A50
+#define RVA_CalcDamage 0x1C8A420
 int (*old_CalcDamage)(void* instance, void* arg1, void* arg2) = nullptr;
 
 int new_CalcDamage(void* instance, void* arg1, void* arg2) {
@@ -83,7 +83,7 @@ public:
 
         const char* name = env->GetStringUTFChars(args->nice_name, nullptr);
         if (name) {
-            if (strstr(name, "com.bladetw.bd")) {
+            if (strstr(name, "com.crunchyroll.bleachsoulres")) {
                 std::thread(hack_thread).detach();
             }
             env->ReleaseStringUTFChars(args->nice_name, name);
