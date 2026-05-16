@@ -83,7 +83,7 @@ public:
 
         const char* name = env->GetStringUTFChars(args->nice_name, nullptr);
         if (name) {
-            if (strstr(name, "com.crunchyroll.bleachsoulres")) {
+            if (strstr(name, "com.bladetw.bd")) {
                 std::thread(hack_thread).detach();
             }
             env->ReleaseStringUTFChars(args->nice_name, name);
