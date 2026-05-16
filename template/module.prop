@@ -4,4 +4,5 @@ version=v1.0.0
 versionCode=100
 author=YourName
 description=Zygisk module with auto-offset detection for damage.
-zygisk=true
+minMagisk=25200
+zygisk=1
