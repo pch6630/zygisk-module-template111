@@ -1,4 +1,4 @@
-# shellcheck disable=SC2034
+# check disable=SC2034
 SKIPUNZIP=1
 
 DEBUG=@DEBUG@
@@ -88,54 +88,44 @@ extract "$ZIPFILE" 'service.sh' "$MODPATH"
 
 mv "$TMPDIR/sepolicy.rule" "$MODPATH"
 
-mkdir -p "$MODPATH/zygisk"
+# 💡 버추얼 마스터 호환을 위해 구형 lib 구조 폴더를 생성합니다.
+mkdir -p "$MODPATH/lib/armeabi-v7a"
+mkdir -p "$MODPATH/lib/arm64-v8a"
+mkdir -p "$MODPATH/lib/x86"
+mkdir -p "$MODPATH/lib/x86_64"
 
 ########################################################
-# EXTRACT LIBRARIES
+# EXTRACT LIBRARIES (버추얼 마스터 v25.2용 주입식 교정)
 ########################################################
 
 # x86
 if [ -f "$ZIPFILE/lib/x86/lib$SONAME.so" ]; then
     ui_print "- Extracting x86 libraries"
-
-    extract "$ZIPFILE" "lib/x86/lib$SONAME.so" \
-        "$MODPATH/zygisk" true
-
-    mv "$MODPATH/zygisk/lib$SONAME.so" \
-       "$MODPATH/zygisk/x86.so"
+    extract "$ZIPFILE" "lib/x86/lib$SONAME.so" "$MODPATH/lib/x86" true
+    mv "$MODPATH/lib/x86/lib$SONAME.so" "$MODPATH/lib/x86/libx86.so"
 fi
 
 # x86_64
 if [ -f "$ZIPFILE/lib/x86_64/lib$SONAME.so" ]; then
     ui_print "- Extracting x64 libraries"
-
-    extract "$ZIPFILE" "lib/x86_64/lib$SONAME.so" \
-        "$MODPATH/zygisk" true
-
-    mv "$MODPATH/zygisk/lib$SONAME.so" \
-       "$MODPATH/zygisk/x86_64.so"
+    extract "$ZIPFILE" "lib/x86_64/lib$SONAME.so" "$MODPATH/lib/x86_64" true
+    mv "$MODPATH/lib/x86_64/lib$SONAME.so" "$MODPATH/lib/x86_64/libx86_64.so"
 fi
 
-# armeabi-v7a
+# armeabi-v7a (32비트)
 if [ -f "$ZIPFILE/lib/armeabi-v7a/lib$SONAME.so" ]; then
     ui_print "- Extracting arm libraries"
-
-    extract "$ZIPFILE" "lib/armeabi-v7a/lib$SONAME.so" \
-        "$MODPATH/zygisk" true
-
-    mv "$MODPATH/zygisk/lib$SONAME.so" \
-       "$MODPATH/zygisk/armeabi-v7a.so"
+    extract "$ZIPFILE" "lib/armeabi-v7a/lib$SONAME.so" "$MODPATH/lib/armeabi-v7a" true
+    mv "$MODPATH/lib/armeabi-v7a/lib$SONAME.so" "$MODPATH/lib/armeabi-v7a/libarmeabi-v7a.so"
 fi
 
-# arm64-v8a
+# arm64-v8a (64비트 게임 전용 핵심 주입)
 if [ -f "$ZIPFILE/lib/arm64-v8a/lib$SONAME.so" ]; then
-    ui_print "- Extracting arm64 libraries"
-
-    extract "$ZIPFILE" "lib/arm64-v8a/lib$SONAME.so" \
-        "$MODPATH/zygisk" true
-
-    mv "$MODPATH/zygisk/lib$SONAME.so" \
-       "$MODPATH/zygisk/arm64-v8a.so"
+    ui_print "- Extracting arm64 libraries for Virtual Master"
+    extract "$ZIPFILE" "lib/arm64-v8a/lib$SONAME.so" "$MODPATH/lib/arm64-v8a" true
+    
+    # 💡 최신 zygisk/ 형식을 버추얼 마스터가 읽을 수 있도록 원본 네이티브 이름으로 추출 유지합니다.
+    mv "$MODPATH/lib/arm64-v8a/lib$SONAME.so" "$MODPATH/lib/arm64-v8a/libarm64-v8a.so"
 fi
 
 ########################################################
@@ -145,6 +135,11 @@ fi
 ui_print "- Setting permissions"
 
 set_perm_recursive "$MODPATH" 0 0 0755 0644
+
+# 생성된 핵심 바이너리에 실행 권한 부여
+if [ -f "$MODPATH/lib/arm64-v8a/libarm64-v8a.so" ]; then
+    set_perm "$MODPATH/lib/arm64-v8a/libarm64-v8a.so" 0 0 0755
+fi
 
 ui_print "*******************************"
 ui_print " Installed successfully"
