@@ -17,7 +17,7 @@ extern "C" int DobbyHook(void *address, void *replace_call, void **origin_call);
 using zygisk::Api;
 using zygisk::AppSpecializeArgs;
 
-#define RVA_CalcDamage 0x2D50A24
+#define RVA_CalcDamage 0x1E0D650
 int (*old_CalcDamage)(void* instance, void* arg1, void* arg2) = nullptr;
 
 int new_CalcDamage(void* instance, void* arg1, void* arg2) {
